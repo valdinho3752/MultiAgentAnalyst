@@ -1,0 +1,116 @@
+"S_BOASFI66_000728": {
+    "Nombre dataset": "Clasificación de Cartera y Contingente por Entidad, Estado y Tipo del Crédito",
+    "Descripcion tabla": "Esta tabla contiene los montos de la cartera de crédito al cierre de cada trimestre de cada año, de todas las entidades de intermediacion financieras reguladas oficilamente por la Autoridad de Supervisión del Sistema Financiero (ASFI). Presenta un campo que permite agrupar los montos de la cartera por tipo de entidad financiera (ej: bancos, cooperativas), otro campo que son las siglas oficiales de las entidades financieras (ej: BNB, BME), otro campo por tipo de crédito (ej: vivienda, consumo, empresarial) y otro campo por estado de la cartera (si es cartera contingente o si se encuentra vigente, en mora, si fue reprogramada o si se encuentra en estado de recuperación judicial). Presenta también 2 campos de hechos que representan el saldo de la cartera al cierre del trimestre expresado en bolivianos (Bs) y el otro expresado en dólares (USD).",
+    "Fuente": "ASFI",
+    "Granularidad": "Trimestral",
+    "Tematica": "Finanzas / Sector Bancario",
+    "Idioma": "Español",
+    "Dimensiones": {
+        "Año": {
+            "Tipo dato": "integer",
+            "Tipo dimension": "Temporal",
+            "Descripcion": "Representa el año calendario en el que se realiza el reporte de cierre trimestral de la cartera crediticia.",
+            "Miembros": [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+            "Jerarquia": "J-1-1"
+        },
+        "Estado Cartera": {
+            "Tipo dato": "character varying",
+            "Tipo dimension": "Estado Operativo",
+            "Descripcion": "Clasifica la situación jurídica y de cumplimiento del crédito, permitiendo distinguir entre cartera vigente, en mora (vencida/ejecución), reprogramada o compromisos contingentes.",
+            "Miembros": [
+                "Contingente",
+                "Ejecucion",
+                "Reprogramada o reestructurada ejecucion",
+                "Reprogramada o reestructurada vencida",
+                "Reprogramada o reestructurada vigente",
+                "Vencida",
+                "Vigente"
+            ],
+            "Jerarquia": ""
+        },
+        "Tipo Entidad": {
+            "Tipo dato": "character varying",
+            "Tipo dimension": "Institucional",
+            "Descripcion": "Agrupa a las instituciones financieras según su licencia de operación y modelo de negocio definido por la Ley de Servicios Financieros.",
+            "Miembros": ["Banco Múltiple", "Banco PyME", "EIF 2do. Piso", "IFD"],
+            "Jerarquia": ""
+        },
+        "Entidad": {
+            "Tipo dato": "character varying",
+            "Tipo dimension": "Identificación",
+            "Descripcion": "Siglas oficiales que identifican de forma unívoca a cada entidad de intermediación financiera supervisada por ASFI.",
+            "Miembros": ["BCR", "BDB", "BDR", "BEC", "BFO", "BFS", "BGA", "BIE", "BIS", "BME", "BNA", "BNB", "BPR", "BSO", "BUN", "ICI", "ICR", "IDI", "IFO", "IFU", "IID", "IIM", "IPM", "ISA", "PCO", "PEF", "PLA"],
+            "Jerarquia": ""
+        },
+        "Trimestre": {
+            "Tipo dato": "character varying",
+            "Tipo dimension": "Temporal",
+            "Descripcion": "Identificador del periodo de tres meses (I, II, III, IV) al cual corresponde el corte de los saldos de cartera.",
+            "Miembros": ["I", "II", "III", "IV"],
+            "Jerarquia": "J-1-2"
+        },
+        "Tipo Crédito": {
+            "Tipo dato": "character varying",
+            "Tipo dimension": "Categoría de Producto",
+            "Descripcion": "Segmentación detallada del préstamo basada en el destino del crédito, el tipo de garantía y el perfil del deudor (Microcrédito, Vivienda, PyME, etc.).",
+            "Miembros": [
+                "Crédito debidamente Garantizado al Sector Público",
+                "Crédito de Consumo",
+                "Crédito de Consumo a traves de Medios Electronicos",
+                "Crédito de Consumo debidamente Garantizado",
+                "Crédito de Consumo Garantizado con Garantía Real",
+                "Crédito de Vivienda de Interés Social Sin Garantía Hipotecaria",
+                "Crédito de Vivienda Sin Garantía Hipotecaria",
+                "Crédito de Vivienda sin Garantía Hipotecaria debidamente Garantizado",
+                "Crédito Empresarial",
+                "Crédito Empresarial Agropecuario",
+                "Crédito Empresarial Calificado por Días Mora",
+                "Crédito Hipotecario de Vivienda",
+                "Crédito Hipotecario de Vivienda de Interés Social",
+                "Crédito PyME Agropecuario calificado como empresarial",
+                "Crédito PyME Agropecuario Calificado Empresarial",
+                "Crédito PyME Agropecuario Calificados por Días Mora",
+                "Crédito PyME Agropecuario con Garantía Real Calificado Como Empresarial",
+                "Crédito PyME Agropecuario debidamente Garantizado con Garantía Real Calificados por Días Mora",
+                "Crédito PyME Calificado Empresarial",
+                "Crédito PyME Calificado por Días Mora",
+                "Microcrédito Agropecuario",
+                "Microcrédito Agropecuario Debidamente Garantizado",
+                "Microcrédito Agropecuario Debidamente Garantizado c/Garantía Real",
+                "Microcrédito Banca Comunal",
+                "Microcrédito Banca Comunal debidamente Garantizado",
+                "Microcrédito debidamente Garantizado",
+                "Microcrédito Garantizado con Garantía Real",
+                "Microcrédito Individual",
+                "Microcrédito Individual debidamente Garantizado",
+                "Microcrédito Individual Garantizado con Garantía Real",
+                "Microcrédito Solidario",
+                "Microcrédito Solidario debidamente Garantizado",
+                "PyME Agropecuario Debidamente Garantizado Calificados por Días Mora"
+            ],
+            "Jerarquia": ""
+        }
+    },
+    "Hechos": {
+        "Monto US$": {
+            "Tipo dato": "numeric/decimal",
+            "Tipo hecho": "acumulado",
+            "Descripcion": "Saldo total de la cartera de créditos y contingentes al cierre del trimestre, expresado en dólares estadounidenses.",
+            "Unidad de medida": "Dólares (USD)",
+            "Funcioenes de agregacion": "SUM, AVG, MAX",
+            "Funciones de agregacion prohibidas": "SUM sobre la dimensión 'Tiempo' (Año/Trimestre)",
+            "Avertencias": "Al ser un saldo acumulado al cierre, sumar diferentes trimestres del mismo año duplicará la cartera. Para cierres anuales, usar solo el Trimestre IV.",
+            "Dependencias": "Entidad, Tipo Crédito, Estado Cartera"
+        },
+        "Monto Bs": {
+            "Tipo dato": "numeric/decimal",
+            "Tipo hecho": "acumulado",
+            "Descripcion": "Saldo total de la cartera de créditos y contingentes al cierre del trimestre, expresado en moneda nacional (Bolivianos).",
+            "Unidad de medida": "Bolivianos (Bs)",
+            "Funcioenes de agregacion": "SUM, AVG, MAX",
+            "Funciones de agregacion prohibidas": "SUM sobre la dimensión 'Tiempo' (Año/Trimestre)",
+            "Avertencias": "Este valor representa una fotografía al cierre del periodo. No sumar meses o trimestres correlativos para obtener totales.",
+            "Dependencias": "Entidad, Tipo Crédito, Estado Cartera"
+        }
+    }
+}
