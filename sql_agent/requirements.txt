@@ -1,0 +1,9 @@
+google-adk
+fastmcp
+qdrant-client
+google-cloud-aiplatform
+google-auth
+python-dotenv
+uvicorn
+a2a==0.44
+a2a-sdk==0.3.22
