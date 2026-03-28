@@ -1,0 +1,170 @@
+version: '3.8'
+
+services:
+  rag_agent:
+    build: ./rag_agent
+    container_name: rag_agent
+    env_file: .env
+    ports:
+      - "10001:10001"
+    volumes:
+      - ./rag_agent:/app
+      - ./secrets/mcp-a2a-484414-c2067ae41c3b.json:/app/gcp-key.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
+      - GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}
+      - A2A_HOST=rag_agent
+      - A2A_RPC_URL=http://rag_agent:10001
+      - LLM_MODEL=${LLM_MODEL}
+    depends_on:
+      mcp_server:
+        condition: service_healthy
+    command: [ "uvicorn", "agent:app", "--host", "0.0.0.0", "--port", "10001" ]
+
+  sql_agent:
+    build: ./sql_agent
+    container_name: sql_agent
+    env_file: .env
+    ports:
+      - "10002:10002"
+    volumes:
+      - ./sql_agent:/app
+      - ./secrets/mcp-a2a-484414-c2067ae41c3b.json:/app/gcp-key.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
+      - GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}
+      - A2A_HOST=sql_agent
+      - A2A_RPC_URL=http://sql_agent:10002
+      - LLM_MODEL=${LLM_MODEL}
+    depends_on:
+      mcp_server:
+        condition: service_healthy
+    command: [ "uvicorn", "agent:app", "--host", "0.0.0.0", "--port", "10002" ]
+
+  executor_agent:
+    build: ./executor_agent
+    container_name: executor_agent
+    env_file: .env
+    ports:
+      - "10004:10004"
+    volumes:
+      - ./executor_agent:/app
+      - ./secrets/mcp-a2a-484414-c2067ae41c3b.json:/app/gcp-key.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
+      - GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}
+      - A2A_HOST=executor_agent
+      - A2A_RPC_URL=http://executor_agent:10004
+      - HOST_DB=${HOST_DB}
+      - USER_DB=${USER_DB}
+      - PASS_DB=${PASS_DB}
+      - DATABASE_DB=${DATABASE_DB}
+      - LLM_MODEL=${LLM_MODEL}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c \"import psycopg2; import os; psycopg2.connect(host=os.environ.get('HOST_DB'), user=os.environ.get('USER_DB'), password=os.environ.get('PASS_DB'), dbname=os.environ.get('DATABASE_DB'))\"" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: [ "uvicorn", "agent:app", "--host", "0.0.0.0", "--port", "10004" ]
+
+  orchestrator_agent:
+    build: ./ochestrator_agent
+    container_name: orchestrator_agent
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ochestrator_agent:/app/orchestrator_agent
+      - ./secrets/mcp-a2a-484414-c2067ae41c3b.json:/app/gcp-key.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
+      - GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}
+      - LLM_MODEL=${LLM_MODEL}
+    depends_on:
+      - rag_agent
+      - sql_agent
+      - executor_agent
+    command: [ "adk", "web", "--host", "0.0.0.0" ]
+
+  mcp_server:
+    build:
+      context: ./mcp_server
+    container_name: mcp_server
+    env_file: .env
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c \"import socket;s=socket.socket();s.settimeout(2);s.connect(('localhost',8080));s.close()\"" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 2s
+    volumes:
+      # Montamos el JSON del host al contenedor (solo lectura ':ro')
+      - ./secrets/mcp-a2a-484414-c2067ae41c3b.json:/app/gcp-key.json:ro
+    environment:
+      # Variable crítica para que Vertex AI se autentique automáticamente
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
+      # Variables para el proyecto y región de embeddings
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_CLOUD_LOCATION=us-central1 # O la región que prefieras
+      - PYTHONUNBUFFERED=1
+      - PORT=8080
+      - QDRANT_URL=http://host.docker.internal:6333
+
+  db:
+    container_name: postgres_rag
+    image: postgres:latest
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_USER=${USER_DB}
+      - POSTGRES_PASSWORD=${PASS_DB}
+      - POSTGRES_DB=${DATABASE_DB}
+      - PGPASSWORD=${PASS_DB} # Necesario para que pg_dump no pida pass
+    volumes:
+      # PERSISTENCIA: Los datos no se borran al apagar el contenedor
+      - postgres_data:/var/lib/postgresql
+
+      # INICIALIZACIÓN: Scripts que corren solo la PRIMERA vez
+      - ./DB:/docker-entrypoint-initdb.d
+    command: postgres -c max_wal_size=4GB
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user_rag -d rag_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    ports:
+      - 6333:6333
+      - 6334:6334
+    expose:
+      - 6333
+      - 6334
+      - 6335
+    configs:
+      - source: qdrant_config
+        target: /qdrant/config/production.yaml
+    volumes:
+      - ./qdrant_data:/qdrant/storage
+
+configs:
+  qdrant_config:
+    content: |
+      log_level: INFO
+volumes:
+  postgres_data:
