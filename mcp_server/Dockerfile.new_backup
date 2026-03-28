@@ -1,0 +1,23 @@
+# Use the official Python lightweight image
+FROM python:3.13-slim
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Install the project into /app
+# We assume the build context is the ADK root
+COPY mcp_server /app/mcp_server
+COPY metadata /app/metadata
+
+WORKDIR /app/mcp_server
+
+# Allow statements and log messages to immediately appear in the logs
+ENV PYTHONUNBUFFERED=1
+
+# Install dependencies
+RUN uv sync
+
+EXPOSE $PORT
+
+# Run the FastMCP server
+CMD ["uv", "run", "server.py"]

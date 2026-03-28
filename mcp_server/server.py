@@ -1,0 +1,134 @@
+import asyncio
+import logging
+import os
+import vertexai
+from fastmcp import FastMCP
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
+from vertexai.language_models import TextEmbeddingModel
+
+# ================= CONFIGURACIÓN =================
+# Debe coincidir exactamente con tu script de ingesta
+COLLECTION_NAME = "rag_metadata_demo_vertex"
+VECTOR_NAME = "gcp-vertex-embedding"
+# MODEL_NAME_GCP = "text-embedding-004"
+MODEL_NAME_GCP = "gemini-embedding-001"
+PROJECT_ID = "mcp-a2a-484414" 
+LOCATION = "us-central1"
+
+# URL de Qdrant (ajustada para Docker si es necesario)
+# QDRANT_URL = os.getenv("QDRANT_URL", "http://host.docker.internal:6333")
+# QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+QDRANT_URL = os.getenv("QDRANT_URL", "http://host.docker.internal:6333")
+
+# --- Inicialización de Vertex AI ---
+vertexai.init(project=PROJECT_ID, location=LOCATION)
+embedding_model = TextEmbeddingModel.from_pretrained(MODEL_NAME_GCP)
+
+# --- Inicialización de Qdrant ---
+qdrant_client = QdrantClient(url=QDRANT_URL)
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(format="[%(levelname)s]: %(message)s", level=logging.INFO)
+
+mcp = FastMCP("Currency MCP Server 💵")
+
+def get_single_embedding(text: str):
+    """Helper para obtener un solo vector desde Vertex AI"""
+    embeddings = embedding_model.get_embeddings([text])
+    return embeddings[0].values
+
+@mcp.tool()
+def get_table_schema(table_name: str) -> dict:
+    """
+    Busca en Qdrant el esquema técnico (payload) de una tabla específica.
+    """
+    logger.info(f"--- 🔍 Buscando esquema para la tabla: {table_name} ---")
+    
+    try:
+        # El método scroll devuelve una tupla (List[Record], Optional[Offset])
+        records, next_page_offset = qdrant_client.scroll(
+            collection_name=COLLECTION_NAME,
+            scroll_filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="tipo",
+                        match=models.MatchValue(value='tabla_maestra')
+                    ),
+                    models.FieldCondition(
+                        key="nombre_tabla",
+                        match=models.MatchValue(value=table_name)
+                    )
+                ],
+                must_not=[
+                    models.FieldCondition(
+                        key="tipo",
+                        match=models.MatchValue(value='dimension')
+                    ),
+                    models.FieldCondition(
+                        key="tipo",
+                        match=models.MatchValue(value='hecho')
+                    )
+                ]
+            ),
+            limit=1
+        )
+
+        # 'records' ya es la lista de puntos, no necesitas .result.points
+        if records:
+            logger.info(f"✅ Esquema encontrado para la tabla '{table_name}'")
+            return records[0].payload
+        else:
+            logger.warning(f"⚠️ No se encontró la tabla '{table_name}'")
+            return {"error": "Tabla no encontrada"}
+
+    except Exception as e:
+        logger.error(f"❌ Error al consultar Qdrant: {e}")
+        return {"error": str(e)}
+
+
+@mcp.tool()
+def search_relevant_tables(query: str, limit: int = 5) -> list[dict]:
+    """
+    Busca tablas relevantes basadas en una consulta de lenguaje natural.
+    """
+    logger.info(f"--- 🧠 Buscando tablas relevantes para: '{query}' ---")
+
+    try:
+        # 1. Vectorizar la consulta con Vertex AI
+        query_vector = get_single_embedding(query)
+
+        # 2. Buscar en Qdrant
+        points = qdrant_client.query_points(
+            collection_name=COLLECTION_NAME,
+            query=query_vector,
+            using=VECTOR_NAME,
+            limit=limit,
+            with_payload=True
+        ).points
+
+        results = []
+        for point in points:
+            results.append({
+                "score": point.score,
+                "payload": point.payload
+            })
+            
+        logger.info(f"✅ Encontradas {len(results)} tablas relevantes")
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ Error en búsqueda semántica: {e}")
+        return [{"error": str(e)}]
+
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8080))
+    logger.info(f"🚀 MCP server started on port {port}")
+    asyncio.run(
+        mcp.run_async(
+            transport="http",
+            host="0.0.0.0",
+            port=port,
+        )
+    )
