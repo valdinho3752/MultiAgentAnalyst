@@ -9,12 +9,12 @@ from vertexai.language_models import TextEmbeddingModel
 
 # ================= CONFIGURACIÓN =================
 # Debe coincidir exactamente con tu script de ingesta
-COLLECTION_NAME = "rag_metadata_demo_vertex"
+COLLECTION_NAME = "rag_metadata_demo_vertex_3"
 VECTOR_NAME = "gcp-vertex-embedding"
 # MODEL_NAME_GCP = "text-embedding-004"
 MODEL_NAME_GCP = "gemini-embedding-001"
-PROJECT_ID = "mcp-a2a-484414" 
-LOCATION = "us-central1"
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "mcp-a2a-484414")
+LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
 
 # URL de Qdrant (ajustada para Docker si es necesario)
 # QDRANT_URL = os.getenv("QDRANT_URL", "http://host.docker.internal:6333")
@@ -77,7 +77,16 @@ def get_table_schema(table_name: str) -> dict:
         # 'records' ya es la lista de puntos, no necesitas .result.points
         if records:
             logger.info(f"✅ Esquema encontrado para la tabla '{table_name}'")
-            return records[0].payload
+            schema = records[0].payload
+            
+            # --- OPTIMIZACIÓN ---
+            # Eliminamos las inmensas listas de miembros de las dimensiones
+            if "Dimensiones" in schema:
+                for dim_data in schema["Dimensiones"].values():
+                    dim_data.pop("Miembros", None)
+                    dim_data.pop("Valores ejemplo", None)
+                    
+            return schema
         else:
             logger.warning(f"⚠️ No se encontró la tabla '{table_name}'")
             return {"error": "Tabla no encontrada"}
@@ -98,20 +107,20 @@ def search_relevant_tables(query: str, limit: int = 5) -> list[dict]:
         # 1. Vectorizar la consulta con Vertex AI
         query_vector = get_single_embedding(query)
 
-        # 2. Buscar en Qdrant
+        # 2. Buscar en Qdrant pidiendo SOLO campos específicos
         points = qdrant_client.query_points(
             collection_name=COLLECTION_NAME,
             query=query_vector,
             using=VECTOR_NAME,
             limit=limit,
-            with_payload=True
+            with_payload=["nombre_tabla", "tabla_origen", "tipo"]
         ).points
 
         results = []
         for point in points:
             results.append({
                 "score": point.score,
-                "payload": point.payload
+                "info": point.payload
             })
             
         logger.info(f"✅ Encontradas {len(results)} tablas relevantes")
@@ -120,6 +129,48 @@ def search_relevant_tables(query: str, limit: int = 5) -> list[dict]:
     except Exception as e:
         logger.error(f"❌ Error en búsqueda semántica: {e}")
         return [{"error": str(e)}]
+
+
+@mcp.tool()
+def search_exact_members(query: str, table_name: str, limit: int = 5) -> list[str]:
+    """
+    Busca de forma semántica los valores/miembros categóricos exactos 
+    para utilizar en una cláusula WHERE, basados en lenguaje natural.
+    """
+    logger.info(f"--- 🔍 Buscando miembros en la tabla '{table_name}' para: '{query}' ---")
+    try:
+        query_vector = get_single_embedding(query)
+        points = qdrant_client.query_points(
+            collection_name=COLLECTION_NAME,
+            query=query_vector,
+            using=VECTOR_NAME,
+            limit=limit,
+            query_filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="tipo",
+                        match=models.MatchValue(value="miembro_dimension")
+                    ),
+                    models.FieldCondition(
+                        key="tabla_origen",
+                        match=models.MatchValue(value=table_name)
+                    )
+                ]
+            )
+        ).points
+        
+        results = []
+        for p in points:
+            columna = p.payload.get("nombre_columna", "Desconocida")
+            valor = p.payload.get("valor_miembro", "Desconocido")
+            results.append(f"Columna '{columna}': Valor literal exacto '{valor}' (Score de similitud: {p.score:.3f})")
+            
+        logger.info(f"✅ Encontrados {len(results)} miembros sugeridos")
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ Error en búsqueda de miembros exactos: {e}")
+        return [f"Error: {str(e)}"]
 
 
 if __name__ == "__main__":

@@ -18,14 +18,12 @@ url_db = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}"
 print(f"DEBUG: Connecting to DB at {host}:{port}/{database} as {user}")
 
 # Crear Motor
+engine = create_engine(url_db, pool_pre_ping=True, echo=False)
 try:
-    engine = create_engine(url_db, pool_pre_ping=True, echo=False)
-    # Probar conexión inmediatamente
     with engine.connect() as connection:
         print("DEBUG: Connection successful!")
 except Exception as e:
-    print(f"ERROR: Could not connect to database: {e}")
-    engine = None
+    print(f"WARNING: Could not connect to database at startup, but engine is ready: {e}")
 
 def get_engine():
     return engine

@@ -35,7 +35,7 @@ for nombre_tabla, data_tabla in metadata_raw.items():
         "payload": {
             "tipo": "tabla_maestra",
             "nombre_tabla": nombre_tabla,
-            "json_completo": json.dumps(data_tabla, ensure_ascii=False) # Guardamos todo el JSON para el Agente
+            **data_tabla
         }
     })
 
@@ -59,9 +59,28 @@ for nombre_tabla, data_tabla in metadata_raw.items():
                 "tipo": "dimension",
                 "nombre_columna": col_nombre,
                 "tabla_origen": nombre_tabla,
-                "detalle_json": json.dumps(col_data, ensure_ascii=False)
+                **col_data
             }
         })
+
+        # 2.1 PROCESAR CHUNKS POR CADA MIEMBRO
+        for miembro in col_data.get("Miembros", []):
+            texto_miembro = (
+                f"Valor/Miembro: {miembro}. "
+                f"Dimensión: {col_nombre}. "
+                f"Tabla: {nombre_tabla}. "
+                f"Descripción: {col_data.get('Descripcion')}."
+            )
+            
+            puntos_qdrant.append({
+                "texto": texto_miembro,
+                "payload": {
+                    "tipo": "miembro_dimension",
+                    "valor_miembro": miembro,
+                    "nombre_columna": col_nombre,
+                    "tabla_origen": nombre_tabla
+                }
+            })
 
     # 3. PROCESAR HECHOS (MÉTRICAS)
     # Aquí es vital incluir la lógica de cálculo y agregación
@@ -84,14 +103,14 @@ for nombre_tabla, data_tabla in metadata_raw.items():
                 "tipo": "hecho",
                 "nombre_columna": col_nombre,
                 "tabla_origen": nombre_tabla,
-                "detalle_json": json.dumps(col_data, ensure_ascii=False)
+                **col_data
             }
         })
 
 print(f"✅ Procesado completado. Se generaron {len(puntos_qdrant)} chunks.")
 
 # Guardar en JSON para su posterior vectorización
-OUTPUT_FILE = "chunks_demo2.json"
+OUTPUT_FILE = "chunks_demo3.json"
 with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
     json.dump(puntos_qdrant, f, indent=4, ensure_ascii=False)
 

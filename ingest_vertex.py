@@ -6,12 +6,13 @@ from qdrant_client.http import models
 
 # ================= CONFIGURACIÓN =================
 INPUT_FILE = "chunks_demo2.json"
-COLLECTION_NAME = "rag_metadata_demo_vertex"
+COLLECTION_NAME = "rag_metadata_demo_vertex_3"
 QDRANT_URL = "http://localhost:6333"
 
 # Configuración GCP - ASEGÚRATE DE QUE ESTO SEA CORRECTO
-PROJECT_ID = "mcp-a2a-484414" 
-LOCATION = "us-central1"
+# PROJECT_ID = "mcp-a2a-484414"  # <-- REEMPLAZAR CON TU PROJECT ID EN GCP
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "mcp-a2a-484414")
+LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
 MODEL_NAME = "gemini-embedding-001"
 # MODEL_NAME = "text-embedding-004"
 VECTOR_NAME = "gcp-vertex-embedding" 

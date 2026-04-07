@@ -9,11 +9,11 @@ services:
       - "10001:10001"
     volumes:
       - ./rag_agent:/app
-      - ./secrets/mcp-a2a-484414-c2067ae41c3b.json:/app/gcp-key.json:ro
+      - ./secrets/ragagent-secrets.json:/app/gcp-key.json:ro
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
       - GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI}
-      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_CLOUD_PROJECT=ragagent-491802
       - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}
       - A2A_HOST=rag_agent
       - A2A_RPC_URL=http://rag_agent:10001
@@ -31,11 +31,11 @@ services:
       - "10002:10002"
     volumes:
       - ./sql_agent:/app
-      - ./secrets/mcp-a2a-484414-c2067ae41c3b.json:/app/gcp-key.json:ro
+      - ./secrets/ragagent-secrets.json:/app/gcp-key.json:ro
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
       - GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI}
-      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_CLOUD_PROJECT=ragagent-491802
       - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}
       - A2A_HOST=sql_agent
       - A2A_RPC_URL=http://sql_agent:10002
@@ -53,11 +53,12 @@ services:
       - "10004:10004"
     volumes:
       - ./executor_agent:/app
-      - ./secrets/mcp-a2a-484414-c2067ae41c3b.json:/app/gcp-key.json:ro
+      # - ./secrets/executoragent-secrets.json:/app/gcp-key.json:ro
+      - ./secrets/ragagent-secrets.json:/app/gcp-key.json:ro
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
       - GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI}
-      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_CLOUD_PROJECT=ragagent-491802
       - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}
       - A2A_HOST=executor_agent
       - A2A_RPC_URL=http://executor_agent:10004
@@ -84,11 +85,11 @@ services:
       - "8000:8000"
     volumes:
       - ./ochestrator_agent:/app/orchestrator_agent
-      - ./secrets/mcp-a2a-484414-c2067ae41c3b.json:/app/gcp-key.json:ro
+      - ./secrets/ragagent-secrets.json:/app/gcp-key.json:ro
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
       - GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI}
-      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_CLOUD_PROJECT=ragagent-491802
       - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION}
       - LLM_MODEL=${LLM_MODEL}
     depends_on:
@@ -112,13 +113,13 @@ services:
       start_period: 2s
     volumes:
       # Montamos el JSON del host al contenedor (solo lectura ':ro')
-      - ./secrets/mcp-a2a-484414-c2067ae41c3b.json:/app/gcp-key.json:ro
+      - ./secrets/ragagent-secrets.json:/app/gcp-key.json:ro
     environment:
       # Variable crítica para que Vertex AI se autentique automáticamente
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json
       # Variables para el proyecto y región de embeddings
-      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
-      - GOOGLE_CLOUD_LOCATION=us-central1 # O la región que prefieras
+      - GOOGLE_CLOUD_PROJECT=ragagent-491802
+      - GOOGLE_CLOUD_LOCATION=us-central1
       - PYTHONUNBUFFERED=1
       - PORT=8080
       - QDRANT_URL=http://host.docker.internal:6333
